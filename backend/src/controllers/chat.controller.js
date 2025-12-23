@@ -7,7 +7,7 @@ const chatController = async(req,res)=>{
         title
     })
     res.status(201).json({
-        message:"CHat created sucessfully",
+        message:"Chat created sucessfully",
         chat
     })
 }

@@ -15,7 +15,6 @@ const authMiddleware = async(req,res,next)=>{
     })
     req.user = user
     next()     
-    console.log('This was executed')  
     } catch (error) {
         console.log(error)
         return res.status(402).json({

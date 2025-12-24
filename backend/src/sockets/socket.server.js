@@ -7,7 +7,12 @@ const messageModel = require("../models/message.model");
 const { createMemory, queryMemory } = require("../services/vector.service");
 
 function initSocketServer(httpServer) {
-  const io = new Server(httpServer, {});
+  const io = new Server(httpServer, {
+    cors: {
+    origin: "http://localhost:5173", // Vite default
+    credentials: true,
+  },
+  });
 
   io.use(async (socket, next) => {
     try {
@@ -25,6 +30,8 @@ function initSocketServer(httpServer) {
   });
 
   io.on("connection", (socket) => {
+
+    console.log("A user connected",socket.user.id)
 
     socket.on("ai-message", async (payload) => {
       try {

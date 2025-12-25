@@ -21,6 +21,14 @@ const MainRoutes = () => {
         </ProtectedRoute>
       }
     />
+      <Route
+      path="/gg"
+      element={
+        <ProtectedRoute>
+          <ChatLayout />
+        </ProtectedRoute>
+      }
+    />
     </Routes>
   );
 };

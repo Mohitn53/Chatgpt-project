@@ -41,16 +41,18 @@ function initSocketServer(httpServer) {
     socket.on("ai-message", async (payload) => {
       try {
         /* =====================================================
-           0️⃣ CHAT GUARD (ONLY ADDITION – DOES NOT BREAK LOGIC)
+           0️⃣ CHAT GUARD (Detects New Chat)
         ===================================================== */
         let chatId = payload.chat;
+        let isNewChat = false; // 🟢 We track if this is new
 
         if (!chatId || !mongoose.Types.ObjectId.isValid(chatId)) {
           const newChat = await chatModel.create({
             user: socket.user._id,
-            title: "New Chat",
+            title: "New Chat", // Starts as "New Chat"
           });
           chatId = newChat._id;
+          isNewChat = true; // 🟢 Mark as true
         }
 
         /* =====================================================
@@ -69,7 +71,7 @@ function initSocketServer(httpServer) {
         const vector = await generateVector(payload.content);
 
         /* =====================================================
-           3️⃣ QUERY MEMORY (LTM)
+           3️⃣ QUERY MEMORY
         ===================================================== */
         const memory = await queryMemory({
           queryVector: vector,
@@ -78,7 +80,7 @@ function initSocketServer(httpServer) {
         });
 
         /* =====================================================
-           4️⃣ STORE MEMORY (ONLY IF MEANINGFUL)
+           4️⃣ STORE MEMORY
         ===================================================== */
         if (payload.content.length > 40) {
           await createMemory({
@@ -93,7 +95,7 @@ function initSocketServer(httpServer) {
         }
 
         /* =====================================================
-           5️⃣ FETCH CHAT HISTORY (STM)
+           5️⃣ FETCH HISTORY & BUILD PROMPT
         ===================================================== */
         const chatHistory = (
           await messageModel
@@ -104,44 +106,41 @@ function initSocketServer(httpServer) {
         ).reverse();
 
         const stm = chatHistory.map((m) => ({
-          role: m.role,
+          role: m.role === 'user' ? 'user' : 'model', // Ensure roles match API expectations
           parts: [{ text: m.content }],
         }));
 
-        /* =====================================================
-           6️⃣ BUILD PROMPT (UNCHANGED LOGIC)
-        ===================================================== */
+        // 🟢 Logic Fix: History must come BEFORE the current message
         const prompt = [];
+        
+        // Add Memory context if available
+        if (memory.length > 0) {
+            prompt.push({
+                role: "user",
+                parts: [{ text: `Context:\n${memory.map(m => m.metadata.text).join("\n")}` }]
+            });
+        }
 
+        // Add History (excluding current message if it's already saved/fetched)
+        // We filter out the message we just saved to avoid duplication
+        const pastMessages = stm.filter(m => m.parts[0].text !== payload.content);
+        if (pastMessages.length > 0) {
+            prompt.push(...pastMessages);
+        }
+
+        // Add Current User Message
         prompt.push({
-          role: "user",
-          parts: [{ text: payload.content }],
+            role: "user",
+            parts: [{ text: payload.content }]
         });
 
-        if (stm.length > 1) {
-          prompt.push(...stm.slice(0, -1));
-        }
-
-        if (memory.length > 0) {
-          prompt.push({
-            role: "user",
-            parts: [
-              {
-                text: `Relevant past context (use only if helpful):\n${memory
-                  .map((m) => m.metadata.text)
-                  .join("\n")}`,
-              },
-            ],
-          });
-        }
-
         /* =====================================================
-           7️⃣ AI RESPONSE
+           6️⃣ GENERATE RESPONSE
         ===================================================== */
         const response = await generateContent(prompt);
 
         /* =====================================================
-           8️⃣ SAVE AI MESSAGE
+           7️⃣ SAVE AI MESSAGE
         ===================================================== */
         const aiMessage = await messageModel.create({
           chat: chatId,
@@ -151,28 +150,40 @@ function initSocketServer(httpServer) {
         });
 
         /* =====================================================
-           9️⃣ STORE AI MEMORY (OPTIONAL)
+           🟢 8️⃣ AUTO-TITLE GENERATOR (THE FIX)
+           If this is a new chat, ask AI to rename it based on context
         ===================================================== */
-        if (response.length > 40) {
-          const responseVector = await generateVector(response);
-          await createMemory({
-            vectors: responseVector,
-            messageId: aiMessage._id.toString(),
-            metadata: {
-              chat: chatId.toString(),
-              user: socket.user._id.toString(),
-              text: response,
-            },
-          });
+        if (isNewChat) {
+            try {
+                // We run this asynchronously so it doesn't block the response
+                const titlePrompt = [{
+                    role: "user",
+                    parts: [{ text: `Generate a very short chat title (max 4 words) summarizing this message: "${payload.content}"` }]
+                }];
+                
+                // Ask AI for title
+                const newTitle = await generateContent(titlePrompt);
+                
+                // Clean formatting (remove quotes if AI adds them)
+                const cleanTitle = newTitle.replace(/["*]/g, '').trim();
+
+                // Update Database
+                await chatModel.findByIdAndUpdate(chatId, { title: cleanTitle });
+                
+                console.log(`Chat renamed to: ${cleanTitle}`);
+            } catch (err) {
+                console.error("Auto-title failed:", err);
+            }
         }
 
         /* =====================================================
-           🔟 EMIT RESPONSE (SEND REAL chatId BACK)
+           9️⃣ EMIT RESPONSE
         ===================================================== */
         socket.emit("ai-response", {
           content: response,
           chat: chatId,
         });
+
       } catch (err) {
         console.error("AI SOCKET ERROR:", err);
         socket.emit("ai-response", {

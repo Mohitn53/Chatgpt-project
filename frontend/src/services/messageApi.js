@@ -1,6 +1,6 @@
 export const getMessagesByChat = async (chatId) => {
   const res = await fetch(
-    `http://localhost:3001/api/message/chat/${chatId}`,
+    `http://localhost:3001/chat/${chatId}`,
     {
       credentials: "include",
     }
@@ -12,3 +12,4 @@ export const getMessagesByChat = async (chatId) => {
 
   return res.json();
 };
+

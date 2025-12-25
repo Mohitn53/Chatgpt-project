@@ -1,5 +1,5 @@
 const { Server } = require("socket.io");
-const cookie = require("cookie");
+const cookie = require("Cookie");
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 

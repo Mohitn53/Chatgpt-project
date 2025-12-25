@@ -1,5 +1,5 @@
 export const getMyChats = async () => {
-  const res = await fetch("http://localhost:3001/user/chats", {
+  const res = await fetch("https://chatgpt-project-kise.onrender.com//user/chats", {
     credentials: "include",
   });
 
@@ -11,7 +11,7 @@ export const getMyChats = async () => {
 };
 export const deleteChatApi = async (chatId) => {
   // We assume the delete route is at /chat/:id
-  const res = await fetch(`http://localhost:3001/user/chats/${chatId}`, {
+  const res = await fetch(`https://chatgpt-project-kise.onrender.com//user/chats/${chatId}`, {
     method: "DELETE", // This tells the backend to delete
     credentials: "include",
   });
@@ -24,7 +24,7 @@ export const deleteChatApi = async (chatId) => {
 };
 
 export const getUserProfile = async () => {
-  const res = await fetch(`http://localhost:3001/auth/me`, { 
+  const res = await fetch(`https://chatgpt-project-kise.onrender.com//auth/me`, { 
     credentials: "include",
   });
 

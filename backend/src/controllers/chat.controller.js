@@ -11,7 +11,19 @@ const chatController = async(req,res)=>{
         chat
     })
 }
+const getUserChats = async (req, res) => {
+  const user = req.user;
+
+  const chats = await chatModel
+    .find({ user: user._id })
+    .sort({ updatedAt: -1 });
+
+  res.status(200).json({
+    chats,
+  });
+};
 
 module.exports = {
     chatController,
+    getUserChats
 }

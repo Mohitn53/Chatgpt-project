@@ -1,19 +1,24 @@
 const { Server } = require("socket.io");
 const cookie = require("cookie");
 const jwt = require("jsonwebtoken");
+const mongoose = require("mongoose");
+
 const userModel = require("../models/user.model");
-const { generateContent, generateVector } = require("../services/ai.service");
+const chatModel = require("../models/chat.model");
 const messageModel = require("../models/message.model");
+
+const { generateContent, generateVector } = require("../services/ai.service");
 const { createMemory, queryMemory } = require("../services/vector.service");
 
 function initSocketServer(httpServer) {
   const io = new Server(httpServer, {
     cors: {
-    origin: "http://localhost:5173", // Vite default
-    credentials: true,
-  },
+      origin: "http://localhost:5173",
+      credentials: true,
+    },
   });
 
+  /* ===================== AUTH MIDDLEWARE ===================== */
   io.use(async (socket, next) => {
     try {
       const cookies = cookie.parse(socket.handshake.headers?.cookie || "");
@@ -29,46 +34,70 @@ function initSocketServer(httpServer) {
     }
   });
 
+  /* ===================== CONNECTION ===================== */
   io.on("connection", (socket) => {
-
-    console.log("A user connected",socket.user.id)
+    console.log("A user connected", socket.user._id.toString());
 
     socket.on("ai-message", async (payload) => {
       try {
-        /* 1️⃣ Save user message */
+        /* =====================================================
+           0️⃣ CHAT GUARD (ONLY ADDITION – DOES NOT BREAK LOGIC)
+        ===================================================== */
+        let chatId = payload.chat;
+
+        if (!chatId || !mongoose.Types.ObjectId.isValid(chatId)) {
+          const newChat = await chatModel.create({
+            user: socket.user._id,
+            title: "New Chat",
+          });
+          chatId = newChat._id;
+        }
+
+        /* =====================================================
+           1️⃣ SAVE USER MESSAGE
+        ===================================================== */
         const userMessage = await messageModel.create({
-          chat: payload.chat,
+          chat: chatId,
           user: socket.user._id,
           content: payload.content,
           role: "user",
         });
 
-        /* 2️⃣ Generate embedding for user message */
+        /* =====================================================
+           2️⃣ EMBEDDING
+        ===================================================== */
         const vector = await generateVector(payload.content);
 
-        /* 3️⃣ Query relevant memory (LTM) */
+        /* =====================================================
+           3️⃣ QUERY MEMORY (LTM)
+        ===================================================== */
         const memory = await queryMemory({
           queryVector: vector,
           limit: 3,
           metadata: { user: socket.user._id.toString() },
         });
 
-        /* 4️⃣ Store memory ONLY if meaningful */
+        /* =====================================================
+           4️⃣ STORE MEMORY (ONLY IF MEANINGFUL)
+        ===================================================== */
         if (payload.content.length > 40) {
           await createMemory({
             vectors: vector,
             messageId: userMessage._id.toString(),
             metadata: {
-              chat: payload.chat.toString(),
+              chat: chatId.toString(),
               user: socket.user._id.toString(),
               text: payload.content,
             },
           });
         }
 
-        /* 5️⃣ Fetch chat history (STM) */
+        /* =====================================================
+           5️⃣ FETCH CHAT HISTORY (STM)
+        ===================================================== */
         const chatHistory = (
-          await messageModel.find({ chat: payload.chat })
+          await messageModel
+            .find({ chat: chatId })
             .sort({ createdAt: -1 })
             .limit(20)
             .lean()
@@ -79,63 +108,71 @@ function initSocketServer(httpServer) {
           parts: [{ text: m.content }],
         }));
 
-        /* 6️⃣ BUILD PROMPT CORRECTLY */
+        /* =====================================================
+           6️⃣ BUILD PROMPT (UNCHANGED LOGIC)
+        ===================================================== */
         const prompt = [];
 
-        // Always start with CURRENT question
         prompt.push({
           role: "user",
           parts: [{ text: payload.content }],
         });
 
-        // Add STM (exclude last user message to avoid duplication)
         if (stm.length > 1) {
           prompt.push(...stm.slice(0, -1));
         }
 
-        // Add LTM ONLY if it exists
         if (memory.length > 0) {
           prompt.push({
             role: "user",
-            parts: [{
-              text: `Relevant past context (use only if helpful):\n${memory
-                .map(m => m.metadata.text)
-                .join("\n")}`,
-            }],
+            parts: [
+              {
+                text: `Relevant past context (use only if helpful):\n${memory
+                  .map((m) => m.metadata.text)
+                  .join("\n")}`,
+              },
+            ],
           });
         }
 
-        /* 7️⃣ Generate AI response */
+        /* =====================================================
+           7️⃣ AI RESPONSE
+        ===================================================== */
         const response = await generateContent(prompt);
 
-        /* 8️⃣ Save AI response */
+        /* =====================================================
+           8️⃣ SAVE AI MESSAGE
+        ===================================================== */
         const aiMessage = await messageModel.create({
-          chat: payload.chat,
+          chat: chatId,
           user: socket.user._id,
           content: response,
           role: "model",
         });
 
-        /* 9️⃣ Store AI memory (optional) */
+        /* =====================================================
+           9️⃣ STORE AI MEMORY (OPTIONAL)
+        ===================================================== */
         if (response.length > 40) {
           const responseVector = await generateVector(response);
           await createMemory({
             vectors: responseVector,
             messageId: aiMessage._id.toString(),
             metadata: {
-              chat: payload.chat.toString(),
+              chat: chatId.toString(),
               user: socket.user._id.toString(),
               text: response,
             },
           });
         }
 
-        /* 🔟 Send response */
+        /* =====================================================
+           🔟 EMIT RESPONSE (SEND REAL chatId BACK)
+        ===================================================== */
         socket.emit("ai-response", {
           content: response,
-          chat: payload.chat,
+          chat: chatId,
         });
-
       } catch (err) {
         console.error("AI SOCKET ERROR:", err);
         socket.emit("ai-response", {
@@ -143,7 +180,6 @@ function initSocketServer(httpServer) {
         });
       }
     });
-
   });
 }
 

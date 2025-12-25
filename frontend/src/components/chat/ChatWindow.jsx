@@ -1,9 +1,10 @@
 import MessageBubble from "./MessageBubble";
 import ChatInput from "./ChatInput";
 import useChat from "../../hooks/useChat";
-
+import { useState } from "react";
 export default function ChatWindow() {
   const { messages, sendMessage, loading } = useChat("default-chat");
+  const [chatId, setChatId] = useState(null);
 
   return (
     <div className="flex-1 flex flex-col">

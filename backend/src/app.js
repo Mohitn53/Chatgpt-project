@@ -3,7 +3,6 @@ const authRoutes = require('./routes/auth.routes')
 const chatRoutes = require('./routes/chat.routes')
 const messageRoutes = require('./routes/message.routes')
 const cookieParser = require('cookie-parser')
-const public = require('../public')
 const app = express()
 const path = require('path')
 const cors = require("cors");

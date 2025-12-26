@@ -43,13 +43,12 @@ export default function ChatLayout() {
       setChats(chatData?.chats || []);
 
       // 🟢 Fetch User Profile
-      // Your controller returns { user: { ... } }
       const profileData = await getUserProfile();
       
       if (profileData?.user) {
           setUser({
               username: profileData.user.username || "User",
-              plan: "Pro Plan" // Static for now, or fetch from DB if you add it
+              plan: "Pro Plan" 
           });
       }
     } catch (err) {
@@ -59,12 +58,14 @@ export default function ChatLayout() {
 
   useEffect(() => { initData(); }, []);
 
-  /* ================= 2. LOGOUT ================= */
+  /* ================= 2. LOGOUT (FIXED) ================= */
   const handleLogout = () => {
-     // Clear any local storage if you use it
-     // Redirect to login
-     navigate("/login"); 
-     window.location.reload(); 
+      // 1. Clear storage (Adjust keys if you use different ones)
+      localStorage.removeItem("token"); 
+      localStorage.removeItem("user");
+
+      // 2. Force hard redirect to clear state and go to login
+      window.location.href = "/login"; 
   };
 
   /* ================= 3. DELETE CHAT ================= */

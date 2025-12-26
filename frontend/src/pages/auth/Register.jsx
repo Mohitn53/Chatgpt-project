@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom"; // 🟢 Import Link
 import GlassCard from "../../components/ui/GlassCard";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
@@ -63,6 +63,20 @@ export default function Register() {
 
           <Button loading={loading}>Register</Button>
         </form>
+
+        {/* 🟢 ADDED: Path to Login */}
+        <div className="mt-6 text-center text-sm text-gray-400">
+          <p>
+            Already have an account?{" "}
+            <Link 
+              to="/login" 
+              className="text-blue-400 hover:text-blue-300 transition-colors font-medium hover:underline"
+            >
+              Log in here
+            </Link>
+          </p>
+        </div>
+
       </GlassCard>
     </div>
   );

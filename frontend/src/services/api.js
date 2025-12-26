@@ -1,4 +1,4 @@
-const API_BASE = "https://chatgpt-project-kise.onrender.com//auth";
+const API_BASE = "http://localhost:3001/auth";
 
 /* ========== REGISTER ========== */
 export const registerUser = async (payload) => {
@@ -29,7 +29,7 @@ export const loginUser = async (payload) => {
 };
 
 export const getMe = async () => {
-  const res = await fetch("https://chatgpt-project-kise.onrender.com//auth/me", {
+  const res = await fetch("http://localhost:3001/auth/me", {
     credentials: "include",
   });
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom"; // 🟢 Import Link
 import { motion } from "framer-motion";
 import { useAuth } from "../../context/AuthContext";
 import GlassCard from "../../components/ui/GlassCard";
@@ -46,6 +46,20 @@ export default function Login() {
 
           <Button loading={loading}>Login</Button>
         </form>
+
+        {/* 🟢 ADDED: Registration Link */}
+        <div className="mt-6 text-center text-sm text-gray-400">
+          <p>
+            Not registered yet?{" "}
+            <Link 
+              to="/register" 
+              className="text-blue-400 hover:text-blue-300 transition-colors font-medium hover:underline"
+            >
+              Create an account
+            </Link>
+          </p>
+        </div>
+
       </GlassCard>
     </div>
   );

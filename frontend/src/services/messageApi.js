@@ -1,6 +1,6 @@
 export const getMessagesByChat = async (chatId) => {
   const res = await fetch(
-    `https://chatgpt-project-kise.onrender.com//chat/${chatId}`,
+    `http://localhost:3001/chat/${chatId}`,
     {
       credentials: "include",
     }

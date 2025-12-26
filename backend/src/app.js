@@ -4,7 +4,6 @@ const chatRoutes = require('./routes/chat.routes')
 const messageRoutes = require('./routes/message.routes')
 const cookieParser = require('cookie-parser')
 const app = express()
-const path = require('path')
 const cors = require("cors");
 
 app.use(
@@ -19,9 +18,4 @@ app.use(cookieParser())
 app.use('/auth',authRoutes)
 app.use('/user',chatRoutes)
 app.use('/',messageRoutes)
-app.use(express.static(path.join(__dirname,'../public')))
-
-app.get('*name',(req,res)=>{
-    res.sendFile(path.join(__dirname,'../public/index.html'))
-})
 module.exports = app

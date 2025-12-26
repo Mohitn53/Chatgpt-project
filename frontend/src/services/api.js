@@ -1,4 +1,4 @@
-const API_BASE = "https://chatgpt-project-kise.onrender.com/auth";
+const API_BASE = "http://localhost:3001/auth";
 
 /* ========== REGISTER ========== */
 export const registerUser = async (payload) => {

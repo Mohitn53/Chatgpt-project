@@ -24,7 +24,7 @@ export const deleteChatApi = async (chatId) => {
 };
 
 export const getUserProfile = async () => {
-  const res = await fetch(`https://chatgpt-project-kise.onrender.com//auth/me`, { 
+  const res = await fetch(`https://chatgpt-project-kise.onrender.com/auth/me`, { 
     credentials: "include",
   });
 
